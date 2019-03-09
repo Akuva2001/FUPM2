@@ -1,4 +1,5 @@
 ﻿//pch.h :
+//#define DEBUG
 
 #include <vector>
 #include <string>
@@ -12,6 +13,8 @@
 #include <climits>
 using namespace std;
 
+ofstream out;
+
 enum h_codes
 {
 	OK = 0,
@@ -24,8 +27,8 @@ enum h_codes
 
 enum operation_type
 {
-	RR = 1,			//8 is code, 4 is register to, 20 is memory adress
-	RM = 2,			//8 is code, 4 is register to, 4 is register from, 16 is modifier 
+	RR = 1,			//8 is code, 4 is register to, 4 is register from, 16 is modifier 
+	RM = 2,			//8 is code, 4 is register to, 20 is memory adress
 	RI = 3,			//8 is code, 4 is register to, 20 is modifier
 	Label = -1,
 	End = -2,
@@ -187,7 +190,7 @@ map <string, pair<int, int> > Name_Number_Type = {
 	//{"", {61, -1}},
 	//{"", {62, -1}},
 	//{"", {63, -1}},
-	{"load", {64, RM}},
+	{"load", {64, RR}},
 	{"store", {65, RM}},
 	{"load2", {66, RM}},
 	{"store2", {67, RM}},
@@ -264,7 +267,7 @@ const int Number_Type[] = {
 	ERR,         //    61      
 	ERR,         //    62      
 	ERR,         //    63      
-	RM,         //    64      load
+	RR,         //    64      load
 	RM,         //    65      store
 	RM,         //    66      load2
 	RM,         //    67      store2
@@ -274,13 +277,82 @@ const int Number_Type[] = {
 	RR,         //    71      storer2
 };
 
-void next_word(const string& st, string & word, string::iterator &it) {
-	for (; it < st.end() && (*it == ' ' || *it == '\t'); it++);
-	for (; it < st.end() && *it != ' ' && *it != '\t' && *it != ';' && *it != '\n'; it++) {
-		word.push_back(*it);
-	}
-	return;
-}
+const string Number_Name[] = {
+	"halt",		//	0		RI
+	"syscall",	//	1		RI
+	"add",		//	2		RR
+	"addi",		//	3		RI
+	"sub",		//	4		RR
+	"subi",		//	5		RI
+	"mul",		//	6		RR
+	"muli",		//	7		RI
+	"div",		//	8		RR
+	"divi",		//	9		RI
+	"",	//	10		ERR
+	"",	//	11		ERR
+	"lc",		//	12		RI
+	"shl",		//	13		RR
+	"shli",		//	14		RI
+	"shr",		//	15		RR
+	"shri",		//	16		RI
+	"and",		//	17		RR
+	"andi",		//	18		RI
+	"or",		//	19		RR
+	"ori",		//	20		RI
+	"xor",		//	21		RR
+	"xori",		//	22		RI
+	"not",		//	23		RI
+	"mov",		//	24		RR
+	"",	//	25		ERR
+	"",	//	26		ERR
+	"",	//	27		ERR
+	"",	//	28		ERR
+	"",	//	29		ERR
+	"",	//	30		ERR
+	"",	//	31		ERR
+	"addd",		//	32		RR
+	"subd",		//	33		RR
+	"muld",		//	34		RR
+	"divd",		//	35		RR
+	"itod",		//	36		RR
+	"dtoi",		//	37		RR
+	"push",		//	38		RI
+	"pop",		//	39		RI
+	"call",		//	40		RR
+	"calli",	//	41		RM
+	"ret",		//	42		RI
+	"cmp",		//	43		RR
+	"cmpi",		//	44		RI
+	"cmpd",		//	45		RR
+	"jmp",		//	46		RM
+	"jne",		//	47		RM
+	"jeq",		//	48		RM
+	"jle",		//	49		RM
+	"jl",		//	50		RM
+	"jge",		//	51		RM
+	"jg",		//	52		RM
+	"",	//	53		ERR
+	"",	//	54		ERR
+	"",	//	55		ERR
+	"",	//	56		ERR
+	"",	//	57		ERR
+	"",	//	58		ERR
+	"",	//	59		ERR
+	"",	//	60		ERR
+	"",	//	61		ERR
+	"",	//	62		ERR
+	"",	//	63		ERR
+	"load",		//	64		RR
+	"store",	//	65		RM
+	"load2",	//	66		RM
+	"store2",	//	67		RM
+	"loadr",	//	68		RR
+	"loadr2",	//	69		RR
+	"storer",	//	70		RR
+	"storer2",	//	71		RR
+};
+
+int next_word(const string& st, string & word, string::iterator &it);
 
 int as_int(const string& st) {
 	int x = 0;
@@ -298,19 +370,12 @@ int as_int(const string& st) {
 }
 
 
-/*
+
 void pass_spaces(const string &st, string::iterator &it) {
 	for (; it < st.end() && (*it == ' ' || *it == '\t'); it++);
 	return;
 }
-*/
 
-int as_register(const string& st) {
-	map <string, int> ::iterator it = Is_REGISTR.find(st);
-	if (it == Is_REGISTR.end())
-		return -1;
-	return it->second;
-}
 
 class asm_code {
 public:
@@ -344,7 +409,7 @@ public:
 	}
 	friend ostream& operator << (ostream& out, asm_code& p) {
 		const size_t size = p.vt.size();
-		for (int i = 0; i < size; i++) {
+		for (size_t i = 0; i < size; i++) {
 #ifdef DEBUG
 			cout << p.vt[i] << "####\n";
 #else
@@ -356,47 +421,70 @@ public:
 	}
 	friend ofstream& operator << (ofstream& out, asm_code& p) {
 		const size_t size = p.vt.size();
-		for (int i = 0; i < size; i++)
+		for (size_t i = 0; i < size; i++)
 			cout << p.vt[i] << '\n';
 		return out;
 	}
 };
 
-class operation
-{
+class operation {
 public:
 	int  type = 0, number = 0, A = 0, B = 0, C = 0;
 	unsigned int op = 0;
-	operation(int c = 0) {
-		if (c == 0)
-			return;
-		op = c;
-		number = op >> 24;
-		type = Number_Type[number];
-		A = (op << 8) >> 28;
-		switch (type) {
+
+	friend ostream& operator << (ostream& out, const operation& op) {
+		switch (op.type) {
 		case RM:
-			B = (op << 12) >> 12;
+			out << Number_Name[op.number] << " r" << op.A << ' ' << op.B << '\n';
 			break;
 		case RI:
-			B = (op << 12) >> 12;
-			if ((B >> 19) > 0)
-				B = B & (~(1 << 19)) | (1 << 31);
+			int x;
+			if ((op.B >> 19) > 0)
+				x = op.B&((1 << 20) - 1) | (1 << 31);
+			else
+				x = op.B;
+			out << Number_Name[op.number] << " r" << op.A << ' ' << x << '\n';
 			break;
 		case RR:
-			B = (op << 12) >> 24;
-			C = (op << 16) >> 16;
-			if ((C >> 15) > 0)
-				C = C & (~(1 << 15)) | (1 << 31);
+			if ((op.C >> 15) > 0)
+				x = op.C&((1 << 16) - 1) | (1 << 31);
+			else
+				x = op.C;
+			out << Number_Name[op.number] << " r" << op.A << " r" << op.B << ' ' << x << '\n';
 			break;
 		default:
 			break;
 		}
-		return;
+		return out;
 	}
-
-
-	void operator ()(class machine M);
+	friend ofstream& operator << (ofstream& out, operation& op) {
+		switch (op.type) {
+		case RM:
+			out << Number_Name[op.number] << " r" << op.A << ' ' << op.B << '\n';
+			break;
+		case RI:
+			int x;
+			if ((op.B >> 19) > 0)
+				x = op.B&((1 << 20) - 1) | (1 << 31);
+			else
+				x = op.B;
+			out << Number_Name[op.number] << " r" << op.A << ' ' << x << '\n';
+			break;
+		case RR:
+			if ((op.C >> 15) > 0)
+				x = op.C&((1 << 16) - 1) | (1 << 31);
+			else
+				x = op.C;
+			out << Number_Name[op.number] << " r" << op.A << " r" << op.B << ' ' << x << '\n';
+			break;
+		default:
+			break;
+		}
+		return out;
+	}
+	operation(int c = 0);
+	void gen_code();
+	void operator ()(class machine & M);
 };
 
 class machine_code {
@@ -417,7 +505,7 @@ public:
 		out << "start_adress " << p.start_adress << '\n';
 		out << "stack_adress " << p.stack_adress << '\n';
 		const size_t size = p.vt.size();
-		for (int i = 0; i < size; i++)
+		for (size_t i = 0; i < size; i++)
 			out << p.vt[i] << '\n';
 		return out;
 	}
@@ -429,24 +517,35 @@ public:
 		out << "start_adress " << p.start_adress << '\n';
 		out << "stack_adress " << p.stack_adress << '\n';
 		const size_t size = p.vt.size();
-		for (int i = 0; i < size; i++)
+		for (size_t i = 0; i < size; i++)
 			out << p.vt[i] << '\n';
 		return out;
 	}
 
 
+	void disasm(ostream &out);
+	void disasm(ofstream &out);
 	int init(asm_code & Ac);
 };
 
 
 class machine {
 public:
-	int memory[1 << 20] = {};
+	//int memory[1 << 20] = {};
+	int * memory = NULL;
 	int r[16] = {};
 	int flags = 0;
 	bool endf = false;
+	machine() {
+		memory = new int[1 << 20];
+		memset(memory, 0, (1 << 20) * 4);
+	}
+	~machine() {
+		delete[] memory;
+	}
 
 
 	int init(class machine_code &Mc);
 	int run();
+	int run(ofstream &out);
 };

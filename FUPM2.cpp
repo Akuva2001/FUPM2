@@ -20,39 +20,47 @@ using namespace std;
 
 int main()
 {
-	/*
+
 	ifstream in;
-	in.open("input.txt");
-	ofstream out;
+	in.open("input.fasm");
 	out.open("output.txt");
 	asm_code Asm;
-	cin >> Asm;
+	in >> Asm;
+#ifdef DEBUG
 	cout << "\n###########################################\n###########################################\n";
 	cout << Asm;
 	cout << "\n###########################################\n###########################################\n";
+#endif // DEBUG
 	machine_code Mach;
-	cout<<"result "<<Mach.init(Asm)<<'\n';
+	int code = Mach.init(Asm);
+#ifdef DEBUG
+	cout << "result " << code << '\n';
 	out << Mach;
 	cout << Mach;
+	cout << "\n###########################################\ndisasm\n###########################################\n";
+	Mach.disasm(cout);
+	cout << "\n###########################################\ninit\n###########################################\n";
+#endif // DEBUG
+	machine M;
+	M.init(Mach);
+#ifdef DEBUG
+	for (int i = 0; i < 16; i++) {
+		cout << "r" << i << ": " << M.r[i] << '\n';
+	}
+	cout << "flags: " << M.flags << '\n';
+	cout << "MEMORY:\n";
+	for (int i = 0; i < Mach.vt.size(); i++)
+		cout << i << " " << bitset<sizeof(int) * CHAR_BIT>(M.memory[i])<<"\n";
+	cout << "\n###########################################\nrun\n###########################################\n";
+#endif // DEBUG
+	M.run();
 	in.close();
 	out.close();
 	return 0;
-	*/
+
+	/*
 	for (;;) {
-		/*cin>>*((double*)&a[2]);
-		cout<<*((double*)&a[2])<<"\n";
-		for (int i=0; i<5; i++)
-		{
-			cout<<bitset<sizeof(int) * CHAR_BIT>(a[i])<<"\n";
-			a[i] = 0;
-		}
-		double x;
-		scanf("%Lf", &x);
-		//cin>>x;
-		cout<<x<<'\n';
-		cout<<bitset<sizeof(double) * CHAR_BIT>(x)<<"\n";
-		int k, l;
-		k = x<<*/
+		/*
 
 		double p;
 		//cin>>p;
@@ -74,6 +82,8 @@ int main()
 		//printf("%lf\n", *((double *)k));
 		//printf("%lf\n############\n", *((double *)k));
 	}
+	*/
+
 }
 
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"

@@ -1,4 +1,5 @@
 ﻿// pch.cpp :
+//#define DEBUG
 
 #include "pch.h"
 
@@ -14,7 +15,73 @@
 #include <climits>
 using namespace std;
 
-void operation::operator ()(machine M) {
+
+
+int as_register(const string& st) {
+	map <string, int> ::iterator it = Is_REGISTR.find(st);
+	if (it == Is_REGISTR.end())
+		return -1;
+	return it->second;
+}
+
+int next_word(const string& st, string & word, string::iterator &it) {
+	for (; it < st.end() && (*it == ' ' || *it == '\t'); it++);
+	for (; it < st.end() && *it != ' ' && *it != '\t' && *it != ';' && *it != '\n'; it++) {
+		word.push_back(*it);
+	}
+	return 0;
+}
+
+operation::operation(int c) {
+	if (c == 0)
+		return;
+	op = c;
+	number = op >> 24;
+	type = Number_Type[number];
+	A = (op << 8) >> 28;
+	switch (type) {
+	case RM:
+		B = (op << 12) >> 12;
+		break;
+	case RI:
+		B = (op << 12) >> 12;
+		if ((B >> 19) > 0)
+			B = B & (~(1 << 19)) | (1 << 31);
+		break;
+	case RR:
+		B = (op << 12) >> 28;
+		C = (op << 16) >> 16;
+		if ((C >> 15) > 0)
+			C = C & (~(1 << 15)) | (1 << 31);
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+void operation::gen_code() {
+	switch (type) {
+	case RM:
+		op = (number << 24) + (A << 20) + B;
+		break;
+	case RI:
+		if (B < 0)
+			B += (1 << 31) + (1 << 19);
+		op = (number << 24) + (A << 20) + B;
+		break;
+	case RR:
+		if (C < 0)
+			C += (1 << 31) + (1 << 15);
+		op = (number << 24) + (A << 20) + (B << 16) + C;
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+void operation::operator ()(machine & M) {
 	switch (number) {
 	case HALT:
 		M.endf = true;
@@ -22,6 +89,8 @@ void operation::operator ()(machine M) {
 	case SYSCALL:
 		switch (B) {
 		case EXIT:
+			M.endf = true;
+			break;
 		case OPEN:
 		case READ:
 		case WRITE:
@@ -50,60 +119,270 @@ void operation::operator ()(machine M) {
 		default:
 			break;
 		}
+		//cout << "coco\n";
+		M.r[15]++;
+		//cout << "M.r[15]" << M.r[15] << '\n';
+		break;
 	case ADD:
+		M.r[A] += M.r[B] + C;
+		M.r[15]++;
+		break;
 	case ADDI:
+		M.r[A] += B;
+		M.r[15]++;
+		break;
 	case SUB:
+		M.r[A] -= M.r[B] + C;
+		M.r[15]++;
+		break;
 	case SUBI:
+		M.r[A] -= B;
+		M.r[15]++;
+		break;
 	case MUL:
+		*(long long *)(void *)&M.r[A] = (long long)M.r[A] * ((long long)M.r[B] + C);
+		M.r[15]++;
+		break;
 	case MULI:
+		*(long long *)(void *)&M.r[A] = (long long)M.r[A] * ((long long)B);
+		M.r[15]++;
+		break;
 	case DIV:
+		long long x;
+		x = *(long long *)(void *)&M.r[A];
+		M.r[A] = x / (M.r[B] + C);
+		M.r[A+1] = x % (M.r[B] + C);
+		M.r[15]++;
+		break;
 	case DIVI:
+		x = *(long long *)(void *)&M.r[A];
+		M.r[A] = x / (B);
+		M.r[A + 1] = x % (B);
+		M.r[15]++;
+		break;
 	case LC:
+		M.r[A] = B;
+		M.r[15]++;
+		break;
 	case SHL:
+		M.r[A] <<= M.r[B] + C;
+		M.r[15]++;
+		break;
 	case SHLI:
+		M.r[A] <<= B + C;
+		M.r[15]++;
+		break;
 	case SHR:
+		M.r[A] >>= M.r[B] + C;
+		M.r[15]++;
+		break;
 	case SHRI:
+		M.r[A] >>= B + C;
+		M.r[15]++;
+		break;
 	case AND:
+		M.r[A] &= M.r[B] + C;
+		M.r[15]++;
+		break;
 	case ANDI:
+		M.r[A] &= B + C;
+		M.r[15]++;
+		break;
 	case OR:
+		M.r[A] |= M.r[B] + C;
+		M.r[15]++;
+		break;
 	case ORI:
+		M.r[A] |= B + C;
+		M.r[15]++;
+		break;
 	case XOR:
+		M.r[A] ^= M.r[B] + C;
+		M.r[15]++;
+		break;
 	case XORI:
+		M.r[A] ^= B + C;
+		M.r[15]++;
+		break;
 	case NOT:
+		M.r[A] = ~M.r[A];
+		M.r[15]++;
+		break;
 	case MOV:
+		M.r[A] = M.r[B] + C;
+		M.r[15]++;
+		break;
 	case ADDD:
+		*(double *)(void *)&M.r[A] += *(double *)(void *)&M.r[B] + C;
+		M.r[15]++;
+		break;
 	case SUBD:
+		*(double *)(void *)&M.r[A] -= *(double *)(void *)&M.r[B] + C;
+		M.r[15]++;
+		break;
 	case MULD:
+		*(double *)(void *)&M.r[A] *= *(double *)(void *)&M.r[B] + C;
+		M.r[15]++;
+		break;
 	case DIVD:
+		*(double *)(void *)&M.r[A] /= *(double *)(void *)&M.r[B] + C;
+		M.r[15]++;
+		break;
 	case ITOD:
+		*(double *)(void *)&M.r[A] = (double)M.r[B] + C;
+		M.r[15]++;
+		break;
 	case DTOI:
+		M.r[A] = trunc(*(double *)(void *)&M.r[B]);
+		M.r[15]++;
+		break;
 	case PUSH:
+		M.r[14]--;
+		M.memory[M.r[14]] = M.r[A] + B;
+		M.r[15]++;
+		break;
 	case POP:
+		M.r[A] = M.memory[M.r[14]] + B;
+		M.r[14]++;
+		M.r[15]++;
+		break;
 	case CALL:
+		M.r[14]--;
+		M.memory[M.r[14]] = M.r[15] + 1;
+		M.r[15] = M.r[B] + C;
+		//M.r[A] = M.r[B] + C;
+		break;
 	case CALLI:
+		M.r[14]--;
+		M.memory[M.r[14]] = M.r[15] + 1;
+		M.r[15] = B;
+		//M.r[A] = B;
+		break;
 	case RET:
-	case CMP:
-	case CMPI:
-	case CMPD:
-	case JMP:
-	case JNE:
-	case JEQ:
-	case JLE:
-	case JL:
-	case JGE:
-	case JG:
+		M.r[15] = M.memory[M.r[14]];
+		M.r[14] += B + 1;
+		break;
+	case CMP:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		M.flags = 0;
+		if (M.r[A] < M.r[B] + C)
+			M.flags |= 1 << 4;
+		if (M.r[A] <= M.r[B] + C)
+			M.flags |= 1 << 3;
+		if (M.r[A] == M.r[B] + C)
+			M.flags |= 1 << 2;
+		if (M.r[A] >= M.r[B] + C)
+			M.flags |= 1 << 1;
+		if (M.r[A] > M.r[B] + C)
+			M.flags |= 1 << 0;
+		M.r[15]++;
+		break;
+	case CMPI:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		M.flags = 0;
+		if (M.r[A] < B)
+			M.flags |= 1 << 4;
+		if (M.r[A] <= B)
+			M.flags |= 1 << 3;
+		if (M.r[A] == B)
+			M.flags |= 1 << 2;
+		if (M.r[A] >= B)
+			M.flags |= 1 << 1;
+		if (M.r[A] > B)
+			M.flags |= 1 << 0;
+		M.r[15]++;
+		break;
+	case CMPD:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		M.flags = 0;
+		if (*(double *)(void *)&M.r[A] < *(double *)(void *)&M.r[B] + C)
+			M.flags |= 1 << 4;
+		if (*(double *)(void *)&M.r[A] <= *(double *)(void *)&M.r[B] + C)
+			M.flags |= 1 << 3;
+		if (*(double *)(void *)&M.r[A] == *(double *)(void *)&M.r[B] + C)
+			M.flags |= 1 << 2;
+		if (*(double *)(void *)&M.r[A] >= *(double *)(void *)&M.r[B] + C)
+			M.flags |= 1 << 1;
+		if (*(double *)(void *)&M.r[A] > *(double *)(void *)&M.r[B] + C)
+			M.flags |= 1 << 0;
+		M.r[15]++;
+		break;
+	case JMP:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		M.r[15] = B;
+		break;
+	case JNE:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		if ((M.flags&(1 << 2)) == 0)
+			M.r[15] = B;
+		else
+			M.r[15]++;
+		break;
+	case JEQ:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		if ((M.flags&(1 << 2)) != 0)
+			M.r[15] = B;
+		else
+			M.r[15]++;
+		break;
+	case JLE:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		if ((M.flags&(1 << 3)) != 0)
+			M.r[15] = B;
+		else
+			M.r[15]++;
+		break;
+	case JL:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		if ((M.flags&(1 << 4)) != 0)
+			M.r[15] = B;
+		else
+			M.r[15]++;
+		break;
+	case JGE:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		if ((M.flags&(1 << 1)) != 0)
+			M.r[15] = B;
+		else
+			M.r[15]++;
+		break;
+	case JG:		// < 4, <= 3, == 2, >= 1, > 0 //1 - true, 0 - false
+		if ((M.flags&(1 << 0)) != 0)
+			M.r[15] = B;
+		else
+			M.r[15]++;
+		break;
 	case LOAD:
+		M.r[A] = M.memory[B];
+		M.r[15]++;
+		break;
 	case STORE:
+		M.memory[B] = M.r[A];
+		M.r[15]++;
+		break;
 	case LOAD2:
+		M.r[A] = M.memory[B];
+		M.r[A + 1] = M.memory[B + 1];
+		M.r[15]++;
+		break;
 	case STORE2:
+		M.memory[B] = M.r[A];
+		M.memory[B + 1] = M.r[A + 1];
+		M.r[15]++;
+		break;
 	case LOADR:
+		M.r[A] = M.memory[M.r[B] + C];
+		M.r[15]++;
+		break;
 	case LOADR2:
+		M.r[A] = M.memory[M.r[B] + C];
+		M.r[A+1] = M.memory[M.r[B] + C+1];
+		M.r[15]++;
+		break;
 	case STORER:
+		M.memory[M.r[B] + C] = M.r[A];
+		M.r[15]++;
+		break;
 	case STORER2:
+		M.memory[M.r[B] + C] = M.r[A];
+		M.memory[M.r[B] + C + 1] = M.r[A + 1];
+		M.r[15]++;
 		break;
 	default:
 		break;
 	}
+	//cout << "cococo\n";
 	return;
 }
 
@@ -113,7 +392,7 @@ int machine_code::init(asm_code & Ac) {
 
 	//The first pass
 	int k = 0;
-	for (int i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		size_t t = Ac.vt[i].find(';');
 		if (t != string::npos) {
 			Ac.vt[i].erase(Ac.vt[i].begin() + t, Ac.vt[i].end());
@@ -150,7 +429,7 @@ int machine_code::init(asm_code & Ac) {
 	//################DEBUG
 	//The second pass
 	k = 0;
-	for (int i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		string cpy = Ac.vt[i];
 		string name, A, B, C;
 		string::iterator it = cpy.begin();
@@ -173,8 +452,10 @@ int machine_code::init(asm_code & Ac) {
 				operation op;
 				op.type = (p_it->second).second;
 				op.number = (p_it->second).first;
-				if ((p_it->second).second == RM) {
-					int reg1 = as_register(A);
+				switch ((p_it->second).second) {
+				case RM:
+					int reg1;
+					reg1 = as_register(A);
 					if (reg1 == -1) {
 						map<string, int>::iterator l_it = labels.find(A);
 						if (l_it != labels.end()) {
@@ -191,18 +472,38 @@ int machine_code::init(asm_code & Ac) {
 					}
 					op.op = (op.number << 24) + (op.A << 20) + op.B;
 					(this->vt).push_back(op.op);
+#ifdef DEBUG
+					cout << "name = " << op.number << ", A = " << op.A << ", B = " << op.B << ", C = " << op.C << "\n";
+					cout << "name = " << bitset<8>(op.number) << ", A = " << bitset<4>(op.A) << ", B = " << bitset<20>(op.B) << "\n";
+					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
+					cout << op << "\n\n";
+#endif // DEBUG
+
+
 					k++;
-				}
-				else if ((p_it->second).second == RI) {
+					break;
+				case RI:
 					op.A = as_register(A);
-					op.B = as_int(B);
+					if (op.A == -1) {
+						op.A = 0;
+						op.B = as_int(A);
+					}
+					else
+						op.B = as_int(B);
+
 					if (op.B < 0)
 						op.B += (1 << 31) + (1 << 19);
 					op.op = (op.number << 24) + (op.A << 20) + op.B;
 					(this->vt).push_back(op.op);
+#ifdef DEBUG
+					cout << "name = " << op.number << ", A = " << op.A << ", B = " << op.B << ", C = " << op.C << "\n";
+					cout << "name = " << bitset<8>(op.number) << ", A = " << bitset<4>(op.A) << ", B = " << bitset<20>(op.B) << "\n";
+					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
+					cout << op << "\n\n";
+#endif // DEBUG
 					k++;
-				}
-				else if ((p_it->second).second == RR) {
+					break;
+				case RR:
 					op.A = as_register(A);
 					op.B = as_register(B);
 					op.C = as_int(C);
@@ -210,9 +511,15 @@ int machine_code::init(asm_code & Ac) {
 						op.C += (1 << 31) + (1 << 15);
 					op.op = (op.number << 24) + (op.A << 20) + (op.B << 16) + op.C;
 					(this->vt).push_back(op.op);
+#ifdef DEBUG
+					cout << "name = " << op.number << ", A = " << op.A << ", B = " << op.B << ", C = " << op.C << "\n";
+					cout << "name = " << bitset<8>(op.number) << ", A = " << bitset<4>(op.A) << ", B = " << bitset<4>(op.B) << ", C = " << bitset<16>(op.C) << "\n";
+					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
+					cout << op << "\n\n";
+#endif // DEBUG
 					k++;
-				}
-				else if ((p_it->second).second == End) {
+					break;
+				case End:
 					if (A[0] <= '9' && A[0] >= '0') {
 						op.A = as_int(A);
 					}
@@ -228,6 +535,9 @@ int machine_code::init(asm_code & Ac) {
 					this->start_adress = op.A;
 					this->code = k;
 					return OK;
+					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -235,19 +545,59 @@ int machine_code::init(asm_code & Ac) {
 	return UNKNOWN_ERROR;
 }
 
+void machine_code::disasm(ostream &out) {
+	for (auto it = vt.begin(); it != vt.end(); it++) {
+		operation op = operation(*it);
+		out << op;
+	}
+	out << "end " << start_adress;
+	return;
+}
+
+void machine_code::disasm(ofstream &out) {
+	for (auto it = vt.begin(); it != vt.end(); it++) {
+		operation op = operation(*it);
+		out << op;
+	}
+	out << "end " << start_adress;
+	return;
+}
 
 int machine::init(machine_code &Mc) {
 	this->r[14] = Mc.stack_adress;
 	this->r[15] = Mc.start_adress;
 	//memcpy(this->memory, (void*)(Mc.vt), min((int)(Mc.vt.size()), (1 << 20)) * sizeof(int));
-	for (int i = 0; i < Mc.vt.size() && i < (1 << 20); i++) {
+	for (size_t i = 0; i < Mc.vt.size() && i < (1 << 20); i++) {
 		this->memory[i] = Mc.vt[i];
 	}
 	return 0;
 }
-int machine::run() {
-	while (!endf) {
 
+int machine::run() {
+	while (endf == false) {
+#ifdef DEBUG
+		cout << "r15 " << r[15];
+		cout << ", memory[r[15]] " << bitset<32>(memory[r[15]]) << "\n";
+#endif // DEBUG
+		operation op = operation(memory[r[15]]);
+#ifdef DEBUG
+		cout << op;
+		cout << "number = " << op.number << ", A = " << op.A << ", B = " << op.B << ", C = " << op.C << "\n";
+		cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
+#endif // DEBUG
+		op(*this);
+#ifdef DEBUG
+		cout << "###\n";
+		for (int i = 0; i < 14; i++) {
+			cout << "r" << i << ": " << r[i] << "\t\t\t" << memory[(1 << 20) - i] << '\n';
+		}
+		cout << "r" << 14 << ": " << r[14] - (1<<20) << "\t\t\t" << memory[(1 << 20) - 14] << '\n';
+		cout << "r" << 15 << ": " << r[15] << "\t\t\t" << memory[(1 << 20) - 15] << '\n';
+		cout << "flags: " << bitset<5>(flags) << "\n######################################\n\n";
+#endif // DEBUG
 	}
+#ifdef DEBUG
+	cout << "\nmmmmm\n";
+#endif // DEBUG
 	return 0;
 }
