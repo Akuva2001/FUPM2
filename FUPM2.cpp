@@ -57,40 +57,22 @@ int main()
 		double p;
 		//cin>>p;
 		scanf_s("%lf", &p);
-		printf("%lf\n", p);
 		int *k = (int*)((void *)&p);
 		printf("%lf\n", *((double *)k));
-		k--;
-		cout << bitset<sizeof(int) * CHAR_BIT>(*k) << "\n";
-		for (int i = 0; i < 32; i++) {
-			cout << (int)(((*k)&(1 << i)) >> i);
-		}
-		k++;
-		cout << '\n';
-		cout << '\n';
-		cout << bitset<sizeof(int) * CHAR_BIT>(*k) << "\n";
-		for (int i = 0; i < 32; i++) {
-			cout << (int)(((*k)&(1 << i)) >> i);
-		}
-		k++;
-		cout << '\n';
-		cout << '\n';
-		cout << bitset<sizeof(int) * CHAR_BIT>(*k) << "\n";
-		for (int i = 0; i < 32; i++) {
-			cout << (int)(((*k)&(1 << i)) >> i);
-		}
-		k++;
-		cout << '\n';
-		cout << '\n';
+		cout << "*k\n";
 		cout << bitset<sizeof(int) * CHAR_BIT>(*k) << "\n";
 		for (int i = 0; i < 32; i++) {
 			cout << (int)(((*k)&(1 << i)) >> i);
 		}
 		cout << '\n';
-		k--;
-		printf("%lf\n", *((double *)k));
-		k--;
-		printf("%lf\n############\n", *((double *)k));
+		cout << "*(k+1)\n";
+		cout << bitset<sizeof(int) * CHAR_BIT>(*(k + 1)) << "\n";
+		for (int i = 0; i < 32; i++) {
+			cout << (int)(((*(k + 1))&(1 << i)) >> i);
+		}
+		cout << "\n#################\n";
+		//printf("%lf\n", *((double *)k));
+		//printf("%lf\n############\n", *((double *)k));
 	}
 }
 

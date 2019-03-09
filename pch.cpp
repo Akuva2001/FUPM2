@@ -30,10 +30,10 @@ void operation::operator ()(machine M) {
 		case FREE:
 			break;
 		case SCANINT:
-			scanf("%d", &M.r[A]);
+			scanf_s("%d", &M.r[A]);
 			break;
 		case SCANDOUBLE:
-			scanf("%lf", (double*)&M.r[A]);
+			scanf_s("%lf", (double*)&M.r[A]);
 			break;
 		case PRINTINT:
 			printf("%d", M.r[A]);
@@ -105,45 +105,6 @@ void operation::operator ()(machine M) {
 		break;
 	}
 	return;
-}
-
-
-static void next_word(const string& st, string & word, string::iterator &it) {
-	for (; it < st.end() && (*it == ' ' || *it == '\t'); it++);
-	for (; it < st.end() && *it != ' ' && *it != '\t' && *it != ';' && *it != '\n'; it++) {
-		word.push_back(*it);
-	}
-	return;
-}
-
-static int as_int(const string& st) {
-	int x = 0;
-	size_t i = 0;
-	size_t l = st.length();
-	if (l == 0)
-		return 0;
-	if (st[0] == '-')
-		i++;
-	for (; i < l; i++)
-		x = x * 10 + st[i] - '0';
-	if (st[0] == '-')
-		x *= -1;
-	return x;
-}
-
-
-/*
-static void pass_spaces(const string &st, string::iterator &it) {
-	for (; it < st.end() && (*it == ' ' || *it == '\t'); it++);
-	return;
-}
-*/
-
-static int as_register(const string& st) {
-	map <string, int> ::iterator it = Is_REGISTR.find(st);
-	if (it == Is_REGISTR.end())
-		return -1;
-	return it->second;
 }
 
 int machine_code::init(asm_code & Ac) {
@@ -282,9 +243,11 @@ int machine::init(machine_code &Mc) {
 	for (int i = 0; i < Mc.vt.size() && i < (1 << 20); i++) {
 		this->memory[i] = Mc.vt[i];
 	}
+	return 0;
 }
 int machine::run() {
 	while (!endf) {
 
 	}
+	return 0;
 }
