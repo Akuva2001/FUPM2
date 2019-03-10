@@ -1,5 +1,9 @@
 ﻿//pch.h :
 //#define DEBUG
+#define _CRT_SECURE_NO_WARNINGS
+
+//#define RW_To_Files
+
 
 #include <vector>
 #include <string>
@@ -11,9 +15,9 @@
 #include <algorithm>
 #include <bitset>
 #include <climits>
+#include <cmath>
 using namespace std;
 
-ofstream out;
 
 enum h_codes
 {

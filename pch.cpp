@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <bitset>
 #include <climits>
+#include <cmath>
 using namespace std;
 
 
@@ -99,16 +100,16 @@ void operation::operator ()(machine & M) {
 		case FREE:
 			break;
 		case SCANINT:
-			scanf_s("%d", &M.r[A]);
+			fscanf(stdin, "%d", &M.r[A]);
 			break;
 		case SCANDOUBLE:
-			scanf_s("%lf", (double*)&M.r[A]);
+			fscanf(stdin, "%lf", (double*)&M.r[A]);
 			break;
 		case PRINTINT:
-			printf("%d", M.r[A]);
+			fprintf(stdout, "%d", M.r[A]);
 			break;
 		case PRINTDOUBLE:
-			printf("%lf", *(double *)&M.r[A]);
+			fprintf(stdout, "%lf", *(double *)&M.r[A]);
 			break;
 		case GETCHAR:
 			M.r[A] = getchar();

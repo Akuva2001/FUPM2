@@ -15,84 +15,52 @@
 #include <algorithm>
 #include <bitset>
 #include <climits>
+#include <cmath>
 using namespace std;
 
 
 int main()
 {
-
-	ifstream in;
-	in.open("input.fasm");
-	out.open("output.txt");
-	asm_code Asm;
-	in >> Asm;
-#ifdef DEBUG
-	cout << "\n###########################################\n###########################################\n";
-	cout << Asm;
-	cout << "\n###########################################\n###########################################\n";
-#endif // DEBUG
-	machine_code Mach;
-	int code = Mach.init(Asm);
-#ifdef DEBUG
-	cout << "result " << code << '\n';
-	out << Mach;
-	cout << Mach;
-	cout << "\n###########################################\ndisasm\n###########################################\n";
-	Mach.disasm(cout);
-	cout << "\n###########################################\ninit\n###########################################\n";
-#endif // DEBUG
-	machine M;
-	M.init(Mach);
-#ifdef DEBUG
-	for (int i = 0; i < 16; i++) {
-		cout << "r" << i << ": " << M.r[i] << '\n';
-	}
-	cout << "flags: " << M.flags << '\n';
-	cout << "MEMORY:\n";
-	for (int i = 0; i < Mach.vt.size(); i++)
-		cout << i << " " << bitset<sizeof(int) * CHAR_BIT>(M.memory[i])<<"\n";
-	cout << "\n###########################################\nrun\n###########################################\n";
-#endif // DEBUG
-	M.run();
-	in.close();
-	out.close();
-	return 0;
-
-	/*
 	for (;;) {
-		/*
-
-		double p;
-		//cin>>p;
-		scanf_s("%lf", &p);
-		int *k = (int*)((void *)&p);
-		printf("%lf\n", *((double *)k));
-		cout << "*k\n";
-		cout << bitset<sizeof(int) * CHAR_BIT>(*k) << "\n";
-		for (int i = 0; i < 32; i++) {
-			cout << (int)(((*k)&(1 << i)) >> i);
+#ifdef RW_To_Files
+		freopen("input.fasm", "r", stdin);
+		freopen("output.txt", "w", stdout);
+		out = stdout;
+#endif // Write_To_Files
+		asm_code Asm;
+		cin >> Asm;
+#ifdef DEBUG
+		cout << "\n###########################################\n###########################################\n";
+		cout << Asm;
+		cout << "\n###########################################\n###########################################\n";
+#endif // DEBUG
+		machine_code Mach;
+		int code = Mach.init(Asm);
+#ifdef DEBUG
+		cout << "result " << code << '\n';
+		out << Mach;
+		cout << Mach;
+		cout << "\n###########################################\ndisasm\n###########################################\n";
+		Mach.disasm(cout);
+		cout << "\n###########################################\ninit\n###########################################\n";
+#endif // DEBUG
+		machine M;
+		M.init(Mach);
+#ifdef DEBUG
+		for (int i = 0; i < 16; i++) {
+			cout << "r" << i << ": " << M.r[i] << '\n';
 		}
-		cout << '\n';
-		cout << "*(k+1)\n";
-		cout << bitset<sizeof(int) * CHAR_BIT>(*(k + 1)) << "\n";
-		for (int i = 0; i < 32; i++) {
-			cout << (int)(((*(k + 1))&(1 << i)) >> i);
-		}
-		cout << "\n#################\n";
-		//printf("%lf\n", *((double *)k));
-		//printf("%lf\n############\n", *((double *)k));
+		cout << "flags: " << M.flags << '\n';
+		cout << "MEMORY:\n";
+		for (int i = 0; i < Mach.vt.size(); i++)
+			cout << i << " " << bitset<sizeof(int) * CHAR_BIT>(M.memory[i]) << "\n";
+		cout << "\n###########################################\nrun\n###########################################\n";
+#endif // DEBUG
+		M.run();
+#ifdef RW_To_Files
+		fclose(stdout);
+		fclose(stdin);
+#endif // Write_To_Files
 	}
-	*/
-
+	return 0;
 }
-
-// Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
-// Отладка программы: F5 или меню "Отладка" > "Запустить отладку"
-
-// Советы по началу работы 
-//   1. В окне обозревателя решений можно добавлять файлы и управлять ими.
-//   2. В окне Team Explorer можно подключиться к системе управления версиями.
-//   3. В окне "Выходные данные" можно просматривать выходные данные сборки и другие сообщения.
-//   4. В окне "Список ошибок" можно просматривать ошибки.
-//   5. Последовательно выберите пункты меню "Проект" > "Добавить новый элемент", чтобы создать файлы кода, или "Проект" > "Добавить существующий элемент", чтобы добавить в проект существующие файлы кода.
-//   6. Чтобы снова открыть этот проект позже, выберите пункты меню "Файл" > "Открыть" > "Проект" и выберите SLN-файл.
