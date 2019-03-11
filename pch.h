@@ -2,7 +2,7 @@
 //#define DEBUG
 #define _CRT_SECURE_NO_WARNINGS
 
-//#define RW_To_Files
+//#define Read_From_Files
 
 
 #include <vector>
@@ -36,7 +36,8 @@ enum operation_type
 	RI = 3,			//8 is code, 4 is register to, 20 is modifier
 	Label = -1,
 	End = -2,
-	ERR = 0
+	ERR = 0,
+	WORD = 4
 };
 
 enum command_numbers {
@@ -204,6 +205,7 @@ map <string, pair<int, int> > Name_Number_Type = {
 	{"storer2", {71, RR}},
 
 	{"end", {72, End}},
+	{"word", {73, WORD}}
 };
 
 const int Number_Type[] = {
@@ -366,8 +368,12 @@ int as_int(const string& st) {
 		return 0;
 	if (st[0] == '-')
 		i++;
-	for (; i < l; i++)
-		x = x * 10 + st[i] - '0';
+	for (; i < l; i++) {
+		if (st[0] <= '9' && st[0] >= '0')
+			x = x * 10 + st[i] - '0';
+		else
+			return (1 << 30);													//(1<<30) means wrong st
+	}
 	if (st[0] == '-')
 		x *= -1;
 	return x;
@@ -551,5 +557,4 @@ public:
 
 	int init(class machine_code &Mc);
 	int run();
-	int run(ofstream &out);
 };

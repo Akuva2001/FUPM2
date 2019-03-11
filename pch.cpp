@@ -106,10 +106,10 @@ void operation::operator ()(machine & M) {
 			fscanf(stdin, "%lf", (double*)&M.r[A]);
 			break;
 		case PRINTINT:
-			fprintf(stdout, "%d", M.r[A]);
+			printf("%d", M.r[A]);
 			break;
 		case PRINTDOUBLE:
-			fprintf(stdout, "%lf", *(double *)&M.r[A]);
+			printf("%lg", *(double *)&M.r[A]);
 			break;
 		case GETCHAR:
 			M.r[A] = getchar();
@@ -488,9 +488,29 @@ int machine_code::init(asm_code & Ac) {
 					if (op.A == -1) {
 						op.A = 0;
 						op.B = as_int(A);
+						if (op.B == (1 << 30)) {								//(1<<30) means wrong st
+							map<string, int>::iterator l_it = labels.find(A);
+							if (l_it != labels.end()) {
+								op.B = l_it->second;
+							}
+							else {
+								return MISSED_FUNCTION;
+							}
+						}
 					}
-					else
+					else {
 						op.B = as_int(B);
+						if (op.B == (1 << 30)) {								//(1<<30) means wrong st
+							map<string, int>::iterator l_it = labels.find(B);
+							if (l_it != labels.end()) {
+								op.B = l_it->second;
+							}
+							else {
+								return MISSED_FUNCTION;
+							}
+						}
+					}
+
 
 					if (op.B < 0)
 						op.B += (1 << 31) + (1 << 19);
@@ -515,6 +535,16 @@ int machine_code::init(asm_code & Ac) {
 #ifdef DEBUG
 					cout << "name = " << op.number << ", A = " << op.A << ", B = " << op.B << ", C = " << op.C << "\n";
 					cout << "name = " << bitset<8>(op.number) << ", A = " << bitset<4>(op.A) << ", B = " << bitset<4>(op.B) << ", C = " << bitset<16>(op.C) << "\n";
+					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
+					cout << op << "\n\n";
+#endif // DEBUG
+					k++;
+					break;
+				case WORD:
+					op.op = as_int(A);
+					(this->vt).push_back(op.op);
+#ifdef DEBUG
+					cout << "word, A = " << op.A <<"\n";
 					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
 					cout << op << "\n\n";
 #endif // DEBUG
