@@ -1,9 +1,9 @@
-﻿#include "pch.h"
 //pch.h :
 //#define DEBUG
 #define _CRT_SECURE_NO_WARNINGS
 
-//#define RW_To_Files
+#define Read_From_Files
+
 
 #include <vector>
 #include <string>
@@ -36,7 +36,8 @@ enum operation_type
 	RI = 3,			//8 is code, 4 is register to, 20 is modifier
 	Label = -1,
 	End = -2,
-	ERR = 0
+	ERR = 0,
+	WORD = 4
 };
 
 enum command_numbers {
@@ -204,6 +205,7 @@ map <string, pair<int, int> > Name_Number_Type = {
 	{"storer2", {71, RR}},
 
 	{"end", {72, End}},
+	{"word", {73, WORD}}
 };
 
 const int Number_Type[] = {
@@ -366,8 +368,12 @@ int as_int(const string& st) {
 		return 0;
 	if (st[0] == '-')
 		i++;
-	for (; i < l; i++)
-		x = x * 10 + st[i] - '0';
+	for (; i < l; i++) {
+		if (st[0] <= '9' && st[0] >= '0')
+			x = x * 10 + st[i] - '0';
+		else
+			return (1 << 30);													//(1<<30) means wrong st
+	}
 	if (st[0] == '-')
 		x *= -1;
 	return x;
@@ -551,11 +557,16 @@ public:
 
 	int init(class machine_code &Mc);
 	int run();
-	int run(ofstream &out);
 };
 
-//#############################################################################################################
-//#############################################################################################################
+
+
+//############################################################################################
+//############################################################################################
+//############################################################################################
+//############################################################################################
+//############################################################################################
+
 
 
 // pch.cpp :
@@ -573,6 +584,7 @@ public:
 #include <algorithm>
 #include <bitset>
 #include <climits>
+#include <cmath>
 using namespace std;
 
 
@@ -659,16 +671,16 @@ void operation::operator ()(machine & M) {
 		case FREE:
 			break;
 		case SCANINT:
-			scanf("%d", &M.r[A]);
+			fscanf(stdin, "%d", &M.r[A]);
 			break;
 		case SCANDOUBLE:
-			scanf("%lf", (double*)&M.r[A]);
+			fscanf(stdin, "%lf", (double*)&M.r[A]);
 			break;
 		case PRINTINT:
 			printf("%d", M.r[A]);
 			break;
 		case PRINTDOUBLE:
-			printf("%lf", *(double *)&M.r[A]);
+			printf("%lg", *(double *)&M.r[A]);
 			break;
 		case GETCHAR:
 			M.r[A] = getchar();
@@ -711,7 +723,7 @@ void operation::operator ()(machine & M) {
 		long long x;
 		x = *(long long *)(void *)&M.r[A];
 		M.r[A] = x / (M.r[B] + C);
-		M.r[A + 1] = x % (M.r[B] + C);
+		M.r[A+1] = x % (M.r[B] + C);
 		M.r[15]++;
 		break;
 	case DIVI:
@@ -927,7 +939,7 @@ void operation::operator ()(machine & M) {
 		break;
 	case LOADR2:
 		M.r[A] = M.memory[M.r[B] + C];
-		M.r[A + 1] = M.memory[M.r[B] + C + 1];
+		M.r[A+1] = M.memory[M.r[B] + C+1];
 		M.r[15]++;
 		break;
 	case STORER:
@@ -1047,9 +1059,29 @@ int machine_code::init(asm_code & Ac) {
 					if (op.A == -1) {
 						op.A = 0;
 						op.B = as_int(A);
+						if (op.B == (1 << 30)) {								//(1<<30) means wrong st
+							map<string, int>::iterator l_it = labels.find(A);
+							if (l_it != labels.end()) {
+								op.B = l_it->second;
+							}
+							else {
+								return MISSED_FUNCTION;
+							}
+						}
 					}
-					else
+					else {
 						op.B = as_int(B);
+						if (op.B == (1 << 30)) {								//(1<<30) means wrong st
+							map<string, int>::iterator l_it = labels.find(B);
+							if (l_it != labels.end()) {
+								op.B = l_it->second;
+							}
+							else {
+								return MISSED_FUNCTION;
+							}
+						}
+					}
+
 
 					if (op.B < 0)
 						op.B += (1 << 31) + (1 << 19);
@@ -1074,6 +1106,16 @@ int machine_code::init(asm_code & Ac) {
 #ifdef DEBUG
 					cout << "name = " << op.number << ", A = " << op.A << ", B = " << op.B << ", C = " << op.C << "\n";
 					cout << "name = " << bitset<8>(op.number) << ", A = " << bitset<4>(op.A) << ", B = " << bitset<4>(op.B) << ", C = " << bitset<16>(op.C) << "\n";
+					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
+					cout << op << "\n\n";
+#endif // DEBUG
+					k++;
+					break;
+				case WORD:
+					op.op = as_int(A);
+					(this->vt).push_back(op.op);
+#ifdef DEBUG
+					cout << "word, A = " << op.A <<"\n";
 					cout << bitset<32>(op.op) << "\n   ^   ^   ^   ^   ^   ^   ^   ^\n";
 					cout << op << "\n\n";
 #endif // DEBUG
@@ -1151,7 +1193,7 @@ int machine::run() {
 		for (int i = 0; i < 14; i++) {
 			cout << "r" << i << ": " << r[i] << "\t\t\t" << memory[(1 << 20) - i] << '\n';
 		}
-		cout << "r" << 14 << ": " << r[14] - (1 << 20) << "\t\t\t" << memory[(1 << 20) - 14] << '\n';
+		cout << "r" << 14 << ": " << r[14] - (1<<20) << "\t\t\t" << memory[(1 << 20) - 14] << '\n';
 		cout << "r" << 15 << ": " << r[15] << "\t\t\t" << memory[(1 << 20) - 15] << '\n';
 		cout << "flags: " << bitset<5>(flags) << "\n######################################\n\n";
 #endif // DEBUG
@@ -1162,8 +1204,17 @@ int machine::run() {
 	return 0;
 }
 
-//#############################################################################################################
-//#############################################################################################################
+
+
+
+//############################################################################################
+//############################################################################################
+//############################################################################################
+//############################################################################################
+//############################################################################################
+
+
+
 
 
 // FUPM2.cpp :
@@ -1183,14 +1234,16 @@ int machine::run() {
 #include <algorithm>
 #include <bitset>
 #include <climits>
+#include <cmath>
 using namespace std;
 
 
 int main()
 {
-#ifdef RW_To_Files
+#ifdef Read_From_Files
 	freopen("input.fasm", "r", stdin);
-	freopen("output.txt", "w", stdout);
+	//freopen("output.txt", "w", stdout);
+	//out = stdout;
 #endif // Write_To_Files
 	asm_code Asm;
 	cin >> Asm;
@@ -1203,7 +1256,6 @@ int main()
 	int code = Mach.init(Asm);
 #ifdef DEBUG
 	cout << "result " << code << '\n';
-	out << Mach;
 	cout << Mach;
 	cout << "\n###########################################\ndisasm\n###########################################\n";
 	Mach.disasm(cout);
@@ -1222,8 +1274,8 @@ int main()
 	cout << "\n###########################################\nrun\n###########################################\n";
 #endif // DEBUG
 	M.run();
-#ifdef RW_To_Files
-	fclose(stdout);
+#ifdef Read_From_Files
+	//fclose(stdout);
 	fclose(stdin);
 #endif // Write_To_Files
 	return 0;
